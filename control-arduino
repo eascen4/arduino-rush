@@ -1,0 +1,187 @@
+#include <Wire.h>
+
+// I2C addresses
+const byte INPUT_ARDUINO_ADDRESS = 0x08;
+const byte DISPLAY_ARDUINO_ADDRESS = 0x09;
+
+
+// Constants
+bool TEST_MODE = true;
+const int LANE_COUNT = 3;
+const int DISPLAY_WIDTH = 16;
+
+// State
+bool isGameOver = false;
+int playerLane = 1; // {0, 1, 2} -> {TOP, MIDDLE, BOTTOM}
+unsigned long score = 0;
+
+bool obstacles[LANE_COUNT][DISPLAY_WIDTH];
+bool obstacleExists[LANE_COUNT];
+
+// Time state
+unsigned long prevUpdateTime = 0;
+int updateInterval = 50;
+
+unsigned long prevObstacleTime = 0;
+int obstacleInterval = 3000;
+
+unsigned long lastFrameTime = 0;
+
+
+void setup() {
+  Serial.begin(9600); // Debug
+  
+  Wire.begin();
+
+  for(int i = 0; i < LANE_COUNT; i++) {
+    for(int j = 0; j < DISPLAY_WIDTH; j++) {
+      obstacles[i][j] = false;
+    }
+  }
+
+  randomSeed(2);
+
+  Serial.println("Game State Controller started...");
+}
+
+void createObstacle() {
+  int lane = random(LANE_COUNT);
+  obstacles[lane][DISPLAY_WIDTH - 1] = true;
+}
+
+void resetGame() {
+  score = 0;
+  playerLane = 1;
+  isGameOver = false;
+
+  for(int i = 0; i < LANE_COUNT; i++) {
+    for(int j = 0; j < DISPLAY_WIDTH; j++) {
+      obstacles[i][j] = false;
+    }
+  }
+
+  Serial.println("Game has been reset.");
+}
+
+void readInput() {
+  if(TEST_MODE) {
+
+  } else {
+    Wire.requestFrom(INPUT_ARDUINO_ADDRESS, 1, true); // 1 byte
+
+    if(Wire.available()) {
+      byte inputData = Wire.read();
+
+      if ((inputData & 0x80) == 0x80) { // Get bit 7 (1000 0000)
+        resetGame();
+        return;
+      }
+
+      if(!isGameOver) {
+        byte movementData = inputData & 0x0F; // Get bits 0-3 (0000 1111)
+
+        // UP / DOWN
+        if(movementData == 1 && playerLane > 0) {
+          playerLane--;
+          Serial.print("Player moved UP to lane: ");
+          Serial.println(playerLane);
+
+        } else if (movementData == 2 && playerLane < (LANE_COUNT - 1)) {
+          playerLane++;
+          Serial.print("Player moved DOWN to lane: ");
+          Serial.println(playerLane);
+        }
+      }
+    }
+  }
+}
+
+void sendGameState() {
+  if(TEST_MODE) {
+    _printGameState();
+  }
+
+  Wire.beginTransmission(DISPLAY_ARDUINO_ADDRESS);
+  
+  Wire.write(playerLane);
+  Wire.write(isGameOver ? 1 : 0);
+  
+  for (int i = 0; i < LANE_COUNT; i++) {
+    for (int j = 0; j < DISPLAY_WIDTH; j++) {
+      Wire.write(obstacles[i][j] ? 1 : 0);
+    }
+  }
+  
+  Wire.endTransmission();
+}
+
+void update() {
+  // Make all obstacles move one space to the left
+  for(int i = 0; i < LANE_COUNT; i++) {
+    for(int j = 0; j < DISPLAY_WIDTH - 1; j++) {
+      obstacles[i][j] = obstacles[i][j + 1];
+    }
+    obstacles[i][DISPLAY_WIDTH - 1] = false;
+  }
+
+  if (obstacles[playerLane][0]) {
+    isGameOver = true;
+    Serial.println("GAME OVER!");
+    return;
+  }
+
+  score++;
+}
+
+void loop() {
+  unsigned long currTime = millis();
+  unsigned long frameStart = currTime;
+
+  readInput();
+  
+  if (!isGameOver) {
+
+    if(currTime - prevUpdateTime >= updateInterval) {
+      update();
+      prevUpdateTime = currTime;
+    }
+
+    if(currTime - prevObstacleTime >= obstacleInterval) {
+      createObstacle();
+      prevObstacleTime = currTime;
+    }
+  }
+
+  sendGameState();
+
+  lastFrameTime = millis() - frameStart;
+  delay(5);
+}
+
+void _printGameState() {
+  Serial.println("_________________GAME STATE___________");
+
+  Serial.print("Player in lane: ");
+  Serial.println(playerLane);
+  Serial.print("Score: ");
+  Serial.println(score);
+  Serial.print("Game over: ");
+  Serial.println(isGameOver ? "YES" : "NO");
+  
+  Serial.println("Obstacles:");
+  for (int i = 0; i < LANE_COUNT; i++) {
+    Serial.print("Lane ");
+    Serial.print(i);
+    Serial.print(": ");
+    for (int j = 0; j < DISPLAY_WIDTH; j++) {
+      Serial.print(obstacles[i][j] ? "X" : ".");
+    }
+    Serial.println();
+  }
+
+  Serial.print("μs | Frame time: ");
+  Serial.print(lastFrameTime);
+  Serial.println("ms");
+
+  Serial.println("______________________________________");
+}
