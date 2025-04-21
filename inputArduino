@@ -1,0 +1,68 @@
+#include <Wire.h>
+
+// I2C Slave Address
+const byte INPUT_ADDRESS = 0x0A;
+
+// Pin Definitions
+const int JOYSTICK_X_PIN = A0; // Analog pin for joystick X-axis
+const int BUTTON_PIN = 2;    // Digital pin for the push button
+
+// Variables to store joystick and button data
+int joystickXValue = 0;
+bool buttonState = false;
+bool lastButtonState = false; // For detecting press/release
+bool buttonPressed = false;    //flag to send only once
+
+void setup() {
+  // Initialize I2C as a slave
+  Wire.begin(INPUT_ADDRESS);
+
+  // Register the onRequest event handler
+  Wire.onRequest(sendData);
+
+  // Set pin modes
+  pinMode(JOYSTICK_X_PIN, INPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Use internal pull-up resistor
+  Serial.begin(9600);
+}
+
+void loop() {
+  // Read joystick values
+  joystickXValue = analogRead(JOYSTICK_X_PIN);
+
+  // Read button state
+  buttonState = (digitalRead(BUTTON_PIN) == LOW); // Button is active low
+
+  // Detect button press (rising edge)
+  if (buttonState == true && lastButtonState == false) {
+    buttonPressed = true;
+    Serial.println("Button Pressed");
+  }
+  lastButtonState = buttonState;
+
+  delay(10); // Small delay for stability
+}
+
+void sendData() {
+  // Package the data to send over I2C
+  byte dataToSend[2];
+
+  // Scale joystick values to fit in a byte (0-255)
+  dataToSend[0] = map(joystickXValue, 0, 1023, 0, 255);
+
+
+  // Send button state as a single bit (most significant bit)
+  if (buttonPressed) {
+    dataToSend[1] = 0x80; // Set the MSB to 1 (1000 0000)
+    buttonPressed = false; //clear flag after sending
+  } else {
+    dataToSend[1] = 0x00; // MSB is 0 (0000 0000)
+  }
+
+  // Send the data
+  Wire.write(dataToSend, 2);
+  Serial.print("X: ");
+  Serial.print(dataToSend[0]);
+  Serial.print(" B: ");
+  Serial.print(dataToSend[1], BIN);
+}
