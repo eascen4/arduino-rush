@@ -48,7 +48,13 @@ void sendData() {
   byte dataToSend[2];
 
   // Scale joystick values to fit in a byte (0-255)
-  dataToSend[0] = map(joystickXValue, 0, 1023, 0, 255);
+  // dataToSend[0] = map(joystickXValue, 0, 1023, 0, 255);
+  if(joystickXValue > 511) {
+    dataToSend[0] = 1;
+  }
+  else if(joystickXValue < 511) {
+    dataToSend[0] = 0;
+  }
 
 
   // Send button state as a single bit (most significant bit)
