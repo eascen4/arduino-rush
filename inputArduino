@@ -4,7 +4,7 @@
 const byte INPUT_ADDRESS = 0x0A;
 
 // Pin Definitions
-const int JOYSTICK_X_PIN = A0; // Analog pin for joystick X-axis
+const int JOYSTICK_X_PIN = A1; // Analog pin for joystick X-axis
 const int BUTTON_PIN = 2;    // Digital pin for the push button
 
 // Variables to store joystick and button data
