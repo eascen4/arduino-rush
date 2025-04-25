@@ -1,7 +1,7 @@
 #include <Wire.h>
 
 // I2C Slave Address
-const byte INPUT_ADDRESS = 0x0A;
+const byte INPUT_ADDRESS = 0x08;
 
 // Pin Definitions
 const int JOYSTICK_X_PIN = A1; // Analog pin for joystick X-axis
