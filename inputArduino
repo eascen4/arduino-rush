@@ -53,7 +53,7 @@ void sendData() {
     dataToSend[0] = 1;
   }
   else if(joystickXValue < 511) {
-    dataToSend[0] = 0;
+    dataToSend[0] = 2;
   }
 
 
