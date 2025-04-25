@@ -1,6 +1,94 @@
+#include <LiquidCrystal.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal lcd1(12, 11, 5, 4, 3, 2);
+LiquidCrystal_I2C lcd2(0x27, 16, 2);
+LiquidCrystal_I2C lcd3(0x28, 16, 2);
+
+const byte CONTOL_ARDUINO_ADDRESS = 0x09;
+
+const int LANE_COUNT = 3;
+const int DISPLAY_WIDTH = 16;
+
+bool obstacles[LANE_COUNT][DISPLAY_WIDTH];
+
+bool isGameOver = false;
+int playerLane = 1;
+
+byte characterTop[] = {
+  B00000,
+  B00000,
+  B00000,
+  B01110,
+  B01110,
+  B01110,
+  B00100,
+  B01110
+};
+
+byte characterBottom[] = {
+  B10101,
+  B10101,
+  B10101,
+  B01010,
+  B01010,
+  B01010,
+  B00000,
+  B00000
+};
+
+byte arrowTop[] = {
+  B00000,
+  B00000,
+  B00000,
+  B00001,
+  B00011,
+  B00111,
+  B01111,
+  B11111
+};
+
+byte arrowBottom[] = {
+  B11111,
+  B01111,
+  B00111,
+  B00011,
+  B00001,
+  B00000,
+  B00000,
+  B00000
+};
+
+
+// byte arrowTop[] = {
+//   B00000,
+//   B00000,
+//   B00000,
+//   B00001,
+//   B00011,
+//   B00111,
+//   B01111,
+//   B11111
+// };
+
+// byte arrowTop[] = {
+//   B00000,
+//   B00000,
+//   B00000,
+//   B00001,
+//   B00011,
+//   B00111,
+//   B01111,
+//   B11111
+// };
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  Wire.begin();
+
+
   
 
 }
@@ -8,4 +96,123 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
+  if(Wire.available()){
+
+    playerLane = Wire.read();
+
+    isGameOver = Wire.read();
+
+    for(int i = 0; i < 3; i++){
+      for(int j = 0; j < 16; j++){
+        obstacles[i][j] = Wire.read();
+      }
+    }
+    
+    
+  }
+
+  if(isGameOver == false){
+
+    lcd1.clear();
+    lcd2.clear();
+    lcd3.clear();
+
+    lcd1.createChar(0, arrowTop);
+    lcd1.createChar(1, arrowBottom);
+
+    for(int i = 0; i < DISPLAY_WIDTH; i++){
+
+      if(obstacles[0][i] == 1){
+
+        lcd1.setCursor(0, i);
+        lcd1.write((byte)0);
+
+        lcd1.setCursor(1, i);
+        lcd1.write((byte)1);
+
+      }
+
+    }
+
+    lcd2.createChar(0, arrowTop);
+    lcd2.createChar(1, arrowBottom);
+
+    for(int i = 0; i < DISPLAY_WIDTH; i++){
+
+      if(obstacles[0][i] == 1){
+
+        lcd2.setCursor(0, i);
+        lcd2.write((byte)0);
+
+        lcd2.setCursor(1, i);
+        lcd2.write((byte)1);
+
+      }
+
+    }
+
+    lcd3.createChar(0, arrowTop);
+    lcd3.createChar(1, arrowBottom);
+
+    for(int i = 0; i < DISPLAY_WIDTH; i++){
+
+      if(obstacles[0][i] == 1){
+
+        lcd3.setCursor(0, i);
+        lcd3.write((byte)0);
+
+        lcd3.setCursor(1, i);
+        lcd3.write((byte)1);
+
+      }
+
+    }
+
+    switch(playerLane){
+      case 0:
+        lcd1.createChar(0, characterTop);
+        lcd1.createChar(1, characterBottom);
+
+        lcd1.setCursor(0, 0);
+        lcd1.write((byte)0);
+
+        lcd1.setCursor(1, 0);
+        lcd1.write((byte)1);
+
+      case 1:
+        lcd2.createChar(0, characterTop);
+        lcd2.createChar(1, characterBottom);
+
+        lcd2.setCursor(0, 0);
+        lcd2.write((byte)0);
+
+        lcd2.setCursor(1, 0);
+        lcd2.write((byte)1);
+
+      case 2:
+        lcd3.createChar(0, characterTop);
+        lcd3.createChar(1, characterBottom);
+
+        lcd3.setCursor(0, 0);
+        lcd3.write((byte)0);
+
+        lcd3.setCursor(1, 0);
+        lcd3.write((byte)1);
+
+    }
+    
+  }
+  else{
+    
+    int column = 6;
+
+    lcd2.setCursor(column, 0);
+    lcd2.print("GAME");
+
+    lcd2.setCursor(column, 1);
+    lcd2.print("OVER");
+
+  }
+
 }
+
