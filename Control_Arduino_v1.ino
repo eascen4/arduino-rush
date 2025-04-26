@@ -17,6 +17,7 @@ const int DIFFICULTY_STEP = 10;
 bool isGameOver = false;
 int playerLane = 1; // {0, 1, 2} -> {TOP, MIDDLE, BOTTOM}
 unsigned long score = 0;
+int difficultyLevel = 0; // To store the calculated difficulty level
 
 bool obstacles[LANE_COUNT][DISPLAY_WIDTH];
 
@@ -123,6 +124,12 @@ void sendGameState() {
   }
   
   Wire.endTransmission();
+  
+  Wire.beginTransmission(INPUT_ARDUINO_ADDRESS);
+  Wire.write(isGameOver);         // 1 byte: 0 for false, 1 for true
+  Wire.write(difficultyLevel);    // 1 byte:  0-255 (but make meaningful for your levels)
+  Wire.endTransmission();
+
 }
 
 void update() {
@@ -145,7 +152,7 @@ void update() {
 }
 
 void updateDifficulty() {
-  int difficultyLevel = score / DIFFICULTY_STEP;
+  difficultyLevel = score / DIFFICULTY_STEP;
   updateInterval = max(MIN_UPDATE_INTERVAL, 200 - difficultyLevel * 10);
   obstacleInterval = max(MIN_OBSTACLE_INTERVAL, 2000 - difficultyLevel * 100);
 }
