@@ -4,6 +4,11 @@
 const byte INPUT_ARDUINO_ADDRESS = 0x08;
 const byte DISPLAY_ARDUINO_ADDRESS = 0x09;
 
+// Buzzer pin
+const int BUZZER_PIN = 10;
+
+// LED pins
+const int LED_PINS[3] = {2, 3, 4}
 
 // Constants
 bool TEST_MODE = true;
@@ -126,6 +131,20 @@ void sendGameState() {
   Wire.endTransmission();
 }
 
+void playBuzzer() {
+  tone(BUZZER_PIN, 1000, 200); // Play a tone for 200 milliseconds
+}
+
+void updateLEDs(int difficultyLevel) {
+  for (int i = 0; i < 3; i++) {
+    if (difficultyLevel > i * 2) { // Adjust multiplier for sensitivity
+      digitalWrite(LED_PINS[i], HIGH);
+    } else {
+      digitalWrite(LED_PINS[i], LOW);
+    }
+  }
+}
+
 void update() {
   // Make all obstacles move one space to the left
   for(int i = 0; i < LANE_COUNT; i++) {
@@ -138,6 +157,7 @@ void update() {
   if (obstacles[playerLane][0]) {
     isGameOver = true;
     Serial.println("GAME OVER!");
+    playBuzzer();
     return;
   }
 
@@ -149,6 +169,7 @@ void updateDifficulty() {
   int difficultyLevel = score / DIFFICULTY_STEP;
   updateInterval = max(MIN_UPDATE_INTERVAL, 200 - difficultyLevel * 10);
   obstacleInterval = max(MIN_OBSTACLE_INTERVAL, 2000 - difficultyLevel * 100);
+  updateLEDs(difficultyLevel);
 }
 
 void loop() {
