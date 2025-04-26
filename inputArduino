@@ -4,6 +4,15 @@
 const byte INPUT_ADDRESS = 0x08;
 
 // Pin Definitions
+const int BUZZER_PIN = 9; // Digital pin for the buzzer
+const int LED_PINS[] = {3, 4, 5, 6, 7, 8}; // Digital pins for the LEDs (adjust as needed)
+const int NUM_LEDS = sizeof(LED_PINS) / sizeof(LED_PINS[0]); // Number of LEDs
+
+// Variables to store received data
+bool gameOver = false;
+int difficultyLevel = 0;
+
+// Pin Definitions
 const int JOYSTICK_X_PIN = A1; // Analog pin for joystick X-axis
 const int BUTTON_PIN = 2;    // Digital pin for the push button
 
@@ -19,6 +28,21 @@ void setup() {
 
   // Register the onRequest event handler
   Wire.onRequest(sendData);
+  Wire.onReceive(receiveData);
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    pinMode(LED_PINS[i], OUTPUT);
+  }
+  Serial.begin(9600);
+  Serial.println("Display/Buzzer Arduino is ready");
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    pinMode(LED_PINS[i], OUTPUT);
+  }
+  Serial.begin(9600);
+  Serial.println("Display/Buzzer Arduino is ready");
 
   // Set pin modes
   pinMode(JOYSTICK_X_PIN, INPUT);
@@ -41,6 +65,56 @@ void loop() {
   lastButtonState = buttonState;
 
   delay(10); // Small delay for stability
+}
+
+void receiveData(int byteCount) {
+  if (byteCount == 2) { // Expecting two bytes of data
+    gameOver = Wire.read();      // First byte: gameOver (0 or 1)
+    difficultyLevel = Wire.read(); // Second byte: difficultyLevel (0-255)
+
+    Serial.print("Received: gameOver = ");
+    Serial.print(gameOver);
+    Serial.print(", difficultyLevel = ");
+    Serial.println(difficultyLevel);
+
+    // Control buzzer
+    if (gameOver) {
+      // Tone parameters: pin, frequency, duration.
+      tone(BUZZER_PIN, 1000, 500); // Play a 1kHz tone for 0.5 seconds
+      Serial.println("Buzzing!");
+    } else {
+      noTone(BUZZER_PIN); // Ensure buzzer is off during normal gameplay
+    }
+
+    // Control LEDs based on difficulty
+    updateLEDs(difficultyLevel);
+  } else {
+    Serial.print("Error: Expected 2 bytes, received ");
+    Serial.println(byteCount);
+  }
+}
+
+
+ // The number of lit LEDs increases with the difficulty.
+void updateLEDs(int level) {
+  // Ensure level is within a reasonable range (adjust as needed)
+  level = constrain(level, 0, 10); // Example: Max difficulty level of 10
+
+  // Calculate the number of LEDs to light up.
+  int ledsToLight = map(level, 0, 10, 0, NUM_LEDS);
+  ledsToLight = constrain(ledsToLight,0,NUM_LEDS);
+
+  Serial.print("Lighting ");
+  Serial.print(ledsToLight);
+  Serial.println(" LEDs");
+  // Turn on the appropriate LEDs
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (i < ledsToLight) {
+      digitalWrite(LED_PINS[i], HIGH);
+    } else {
+      digitalWrite(LED_PINS[i], LOW);
+    }
+  }
 }
 
 void sendData() {
