@@ -70,18 +70,13 @@ void receiveEvent(int bytes){
 
     if(bytes < 1) return;
 
-    playerLane = Wire.read();
-    Serial.print("Player Lane: ");
-    Serial.println(playerLane);
-
-    isGameOver = Wire.read();
-    Serial.print("Game Over: ");
-    Serial.println(isGameOver);
+    playerLane = Wire.read() - 9;
+    isGameOver = (Wire.read() == 11);
 
     for(int i = 0; i < 3; i++){
       for(int j = 0; j < 16; j++){
         
-        obstacles[i][j] = Wire.read();
+        obstacles[i][j] = (Wire.read() == 11);
         
       }
     }
