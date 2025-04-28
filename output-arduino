@@ -2,38 +2,43 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-LiquidCrystal lcd1(12, 11, 5, 4, 3, 2);
-LiquidCrystal_I2C lcd2(0x27, 16, 2);
-LiquidCrystal_I2C lcd3(0x28, 16, 2);
+LiquidCrystal_I2C lcd1(0x27, 16, 2);
+LiquidCrystal lcd2(7, 6, 5, 4, 3, 2);
+LiquidCrystal lcd3(13, 12, 11, 10, 9, 8);
 
 const byte CONTOL_ARDUINO_ADDRESS = 0x09;
 
 const int LANE_COUNT = 3;
 const int DISPLAY_WIDTH = 16;
 
-bool obstacles[LANE_COUNT][DISPLAY_WIDTH];
+bool obstacles[LANE_COUNT][DISPLAY_WIDTH] = {
+  {1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}
+};
 
 bool isGameOver = false;
-int playerLane = 1;
+int playerLane = 0;
+bool positionChanged = true;
 
 byte characterTop[] = {
-  B00000,
   B00000,
   B00000,
   B01110,
   B01110,
   B01110,
   B00100,
-  B01110
+  B01110,
+  B10101
 };
 
 byte characterBottom[] = {
   B10101,
   B10101,
-  B10101,
+  B00100,
   B01010,
   B01010,
-  B01010,
+  B11011,
   B00000,
   B00000
 };
@@ -60,144 +65,150 @@ byte arrowBottom[] = {
   B00000
 };
 
+void receiveEvent(int bytes){
+  while(0 < Wire.available()){
 
-// byte arrowTop[] = {
-//   B00000,
-//   B00000,
-//   B00000,
-//   B00001,
-//   B00011,
-//   B00111,
-//   B01111,
-//   B11111
-// };
+    if(bytes < 1) return;
 
-// byte arrowTop[] = {
-//   B00000,
-//   B00000,
-//   B00000,
-//   B00001,
-//   B00011,
-//   B00111,
-//   B01111,
-//   B11111
-// };
+    playerLane = Wire.read();
+    Serial.print("Player Lane: ");
+    Serial.println(playerLane);
+
+    isGameOver = Wire.read();
+    Serial.print("Game Over: ");
+    Serial.println(isGameOver);
+
+    for(int i = 0; i < 3; i++){
+      for(int j = 0; j < 16; j++){
+        
+        obstacles[i][j] = Wire.read();
+        
+      }
+    }
+
+    positionChanged = true;
+
+  }
+
+}
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
-  Wire.begin();
-
-
   
+  Wire.begin(CONTOL_ARDUINO_ADDRESS);
+  Wire.onReceive(receiveEvent);
+
+  lcd1.init();
+  lcd1.begin(16, 2);
+  lcd1.setBacklight(HIGH);
+  lcd2.begin(16, 2);
+  lcd3.begin(16, 2);
+
+
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-
-  if(Wire.available()){
-
-    playerLane = Wire.read();
-
-    isGameOver = Wire.read();
-
-    for(int i = 0; i < 3; i++){
-      for(int j = 0; j < 16; j++){
-        obstacles[i][j] = Wire.read();
-      }
-    }
-    
-    
-  }
+  // Serial.println("Hello");
 
   if(isGameOver == false){
 
-    lcd1.clear();
-    lcd2.clear();
-    lcd3.clear();
+    if(positionChanged){
 
-    lcd1.createChar(0, arrowTop);
-    lcd1.createChar(1, arrowBottom);
+      lcd1.clear();
+      lcd2.clear();
+      lcd3.clear();
 
-    for(int i = 0; i < DISPLAY_WIDTH; i++){
+      lcd1.createChar(0, arrowTop);
+      lcd1.createChar(1, arrowBottom);
 
-      if(obstacles[0][i] == 1){
+      for(int i = 0; i < DISPLAY_WIDTH; i++){
 
-        lcd1.setCursor(0, i);
-        lcd1.write((byte)0);
+        if(obstacles[0][i] == 1){
 
-        lcd1.setCursor(1, i);
-        lcd1.write((byte)1);
+          lcd1.setCursor(i, 0);
+          lcd1.write((byte)0);
 
-      }
+          lcd1.setCursor(i, 1);
+          lcd1.write((byte)1);
 
-    }
-
-    lcd2.createChar(0, arrowTop);
-    lcd2.createChar(1, arrowBottom);
-
-    for(int i = 0; i < DISPLAY_WIDTH; i++){
-
-      if(obstacles[0][i] == 1){
-
-        lcd2.setCursor(0, i);
-        lcd2.write((byte)0);
-
-        lcd2.setCursor(1, i);
-        lcd2.write((byte)1);
+        }
 
       }
 
-    }
+      lcd2.createChar(0, arrowTop);
+      lcd2.createChar(1, arrowBottom);
 
-    lcd3.createChar(0, arrowTop);
-    lcd3.createChar(1, arrowBottom);
+      for(int i = 0; i < DISPLAY_WIDTH; i++){
 
-    for(int i = 0; i < DISPLAY_WIDTH; i++){
+        if(obstacles[1][i] == 1){
 
-      if(obstacles[0][i] == 1){
+          lcd2.setCursor(i, 0);
+          lcd2.write((byte)0);
 
-        lcd3.setCursor(0, i);
-        lcd3.write((byte)0);
+          lcd2.setCursor(i, 1);
+          lcd2.write((byte)1);
 
-        lcd3.setCursor(1, i);
-        lcd3.write((byte)1);
+        }
 
       }
 
-    }
+      lcd3.createChar(0, arrowTop);
+      lcd3.createChar(1, arrowBottom);
 
-    switch(playerLane){
-      case 0:
-        lcd1.createChar(0, characterTop);
-        lcd1.createChar(1, characterBottom);
+      for(int i = 0; i < DISPLAY_WIDTH; i++){
 
-        lcd1.setCursor(0, 0);
-        lcd1.write((byte)0);
+        if(obstacles[2][i] == 1){
 
-        lcd1.setCursor(1, 0);
-        lcd1.write((byte)1);
+          lcd3.setCursor(i, 0);
+          lcd3.write((byte)0);
 
-      case 1:
-        lcd2.createChar(0, characterTop);
-        lcd2.createChar(1, characterBottom);
+          lcd3.setCursor(i, 1);
+          lcd3.write((byte)1);
 
-        lcd2.setCursor(0, 0);
-        lcd2.write((byte)0);
+        }
 
-        lcd2.setCursor(1, 0);
-        lcd2.write((byte)1);
+      }
 
-      case 2:
-        lcd3.createChar(0, characterTop);
-        lcd3.createChar(1, characterBottom);
+      switch(playerLane){
+        case 0:
+          lcd1.createChar(2, characterTop);
+          lcd1.createChar(3, characterBottom);
 
-        lcd3.setCursor(0, 0);
-        lcd3.write((byte)0);
+          lcd1.setCursor(0, 0);
+          lcd1.write((byte)2);
 
-        lcd3.setCursor(1, 0);
-        lcd3.write((byte)1);
+          lcd1.setCursor(0, 1);
+          lcd1.write((byte)3);
+          break;
+
+        case 1:
+          lcd2.createChar(2, characterTop);
+          lcd2.createChar(3, characterBottom);
+
+          lcd2.setCursor(0, 0);
+          // lcd2.print("Heeeyyooo");
+          lcd2.write((byte)2);
+
+          lcd2.setCursor(0, 1);
+          lcd2.write((byte)3);
+          break;
+
+        case 2:
+          lcd3.createChar(2, characterTop);
+          lcd3.createChar(3, characterBottom);
+
+          lcd3.setCursor(0, 0);
+          lcd3.write((byte)2);
+
+          lcd3.setCursor(0, 1);
+          lcd3.write((byte)3);
+          break;
+
+      }
+
+      positionChanged = false;
 
     }
     
@@ -215,4 +226,3 @@ void loop() {
   }
 
 }
-
